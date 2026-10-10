@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Inventory Control System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+
+    :root { --dark-charcoal:#142A26; --accent-yellow:#EAB308; --neon-yellow:#FDE68A; --btn-blue:#3157A4; --btn-teal:#087F8C; --btn-orange:#C65D18; --btn-green:#355E3B; --btn-grey:#59636E; --light-bg:#F4F7F6; --ink:#172B27; --line:#E1E8E5; }
+    body { background:var(--light-bg); font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); }
+    .app-header { background:linear-gradient(120deg,#142A26,#203D36); color:#fff; padding:22px 24px; border-bottom:4px solid var(--accent-yellow); box-shadow:0 5px 18px #142a2617; }
+    .app-title { font-size:clamp(20px,2vw,28px); font-weight:800; letter-spacing:.04em; }
+    .app-subtitle { color:#FDE68A; font-size:12px; font-weight:700; letter-spacing:.08em; margin-top:4px; }
+    .kpi-card,.form-section,.table-container { background:#fff; border:1px solid #e7eeeb; border-radius:14px; padding:18px; box-shadow:0 5px 18px rgba(20,42,38,.055); }
+    .kpi-card { min-height:94px; border-left:4px solid #203D36; transition:transform .18s,box-shadow .18s; }
+    .kpi-card:hover { transform:translateY(-2px); box-shadow:0 9px 22px rgba(20,42,38,.09); }
+    .kpi-card.warning { border-left-color:#EAB308; } .kpi-card.danger { border-left-color:#E5484D; }
+    .kpi-value { font-size:27px; font-weight:800; letter-spacing:-.03em; margin-top:4px; }
+    .kpi-label { font-size:11px; color:#64736E; text-transform:uppercase; letter-spacing:.075em; font-weight:750; }
+    .action-btn { color:white; border:0; border-radius:13px; padding:24px 14px; font-weight:750; width:100%; min-height:112px; text-align:center; transition:transform .18s,box-shadow .18s,filter .18s; box-shadow:0 5px 12px rgba(17,35,31,.12); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+    .action-btn:hover { transform:translateY(-3px); filter:brightness(1.05); box-shadow:0 10px 20px rgba(17,35,31,.16); color:white; }
+    .action-btn:focus-visible,button:focus-visible,.form-control:focus-visible,.form-select:focus-visible { outline:3px solid #EAB308; outline-offset:2px; }
+    .bg-blue { background:var(--btn-blue); } .bg-teal { background:var(--btn-teal); } .bg-orange { background:var(--btn-orange); } .bg-green { background:var(--btn-green); } .bg-grey { background:var(--btn-grey); } .bg-darkgrey { background:#27332F; } .bg-yellow { background:#EAB308; color:#17211E; }
+    .module-view { display:none; } .module-view.active { display:block; animation:fadeUp .22s ease-out; }
+    @keyframes fadeUp { from {opacity:.4; transform:translateY(5px)} to {opacity:1; transform:translateY(0)} }
+    .module-header { color:white; padding:15px 18px; border-radius:13px 13px 0 0; font-weight:800; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .table-container { border-radius:0 0 13px 13px; overflow:hidden; }
+    .table-responsive { border-radius:9px; } table { margin-bottom:0!important; } table th { background:var(--dark-charcoal)!important; color:white!important; font-size:11px; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; } table td { font-size:13px; vertical-align:middle; } .table-hover tbody tr:hover { background:#F4F8F6; }
+    .badge-instock,.badge-lowstock,.badge-outstock { display:inline-block; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:800; white-space:nowrap; } .badge-instock { background:#DDF7E7;color:#17643A; } .badge-lowstock { background:#FFF2C2;color:#825D00; } .badge-outstock { background:#FFE0E2;color:#9C252C; }
+    .form-section { margin-bottom:20px; } .form-label { font-size:13px; font-weight:700; color:#344A43; } .form-control,.form-select { border-color:#D8E2DE; border-radius:9px; padding:.65rem .8rem; } .btn { border-radius:9px; font-weight:650; }
+    @media(max-width:767px) { .app-header { padding:16px; } .app-header .container-fluid { align-items:flex-start!important; gap:12px; flex-direction:column; } .app-header .text-end { text-align:left!important; } .action-btn { min-height:92px; padding:18px 10px; } .module-header { align-items:flex-start; flex-direction:column; } }
+    @media print { .app-header,.module-header button,.btn,.action-btn { display:none!important; } body { background:white; } .table-container { box-shadow:none;border:0;padding:0; } }
+  </style>
+</head>
+<body>
+
+  <!-- Top Main Header -->
+  <div class="app-header">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <div>
+        <div class="app-title"><i class="fa-solid fa-boxes-stacked me-2"></i>INVENTORY CONTROL SYSTEM</div>
+        <div class="app-subtitle">TRACK STOCK | REPORTS | AUTOMATION | SUPPLIERS</div>
+      </div>
+      <div class="text-end">
+        <span id="current-date-display" class="badge bg-secondary me-2">Loading date...</span>
+        <button class="btn btn-outline-light btn-sm" onclick="showModule('main-menu')"><i class="fa-solid fa-house me-1"></i> Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid py-4">
+
+    <!-- KPI Summary Bar -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Products</div>
+          <div class="kpi-value" id="kpi-products">0</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Units in Stock</div>
+          <div class="kpi-value" id="kpi-units">0</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="kpi-card warning">
+          <div class="kpi-label">Low-Stock Items</div>
+          <div class="kpi-value text-warning" id="kpi-lowstock">0</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="kpi-card danger">
+          <div class="kpi-label">Out-of-Stock Items</div>
+          <div class="kpi-value text-danger" id="kpi-outstock">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. MAIN MENU MODULE -->
+    <div id="main-menu" class="module-view active">
+      <div class="row g-3">
+        <!-- Stock Actions -->
+        <div class="col-md-4">
+          <button class="action-btn bg-blue" onclick="showModule('add-stock')">
+            <i class="fa-solid fa-circle-plus fa-2x"></i> Add Stock
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-teal" onclick="showModule('adjust-stock')">
+            <i class="fa-solid fa-sliders fa-2x"></i> Adjust Stock
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-orange" onclick="showModule('remove-stock')">
+            <i class="fa-solid fa-circle-minus fa-2x"></i> Remove Stock
+          </button>
+        </div>
+
+        <!-- Database & Supplier Actions -->
+        <div class="col-md-4">
+          <button class="action-btn bg-green" onclick="showModule('inventory-db')">
+            <i class="fa-solid fa-table fa-2x"></i> Inventory Database
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-green" onclick="showModule('suppliers-db')">
+            <i class="fa-solid fa-truck-field fa-2x"></i> Suppliers Database
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-yellow" onclick="showModule('supplier-view')">
+            <i class="fa-solid fa-user-tag fa-2x"></i> Supplier View
+          </button>
+        </div>
+
+        <!-- Reports -->
+        <div class="col-md-4">
+          <button class="action-btn bg-green" onclick="showModule('low-stock-report')">
+            <i class="fa-solid fa-file-invoice fa-2x"></i> Low Stock Report
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-green" onclick="showModule('low-stock-supplier')">
+            <i class="fa-solid fa-clipboard-list fa-2x"></i> Low Stock by Supplier
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-orange" onclick="showModule('low-stock-date')">
+            <i class="fa-solid fa-calendar-days fa-2x"></i> Low Stock by Date
+          </button>
+        </div>
+
+        <!-- Admin & Settings -->
+        <div class="col-md-4">
+          <button class="action-btn bg-grey" onclick="loadSampleData()">
+            <i class="fa-solid fa-database fa-2x"></i> Load Sample Data
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-darkgrey" onclick="showModule('settings-view')">
+            <i class="fa-solid fa-gear fa-2x"></i> Settings
+          </button>
+        </div>
+        <div class="col-md-4">
+          <button class="action-btn bg-grey" onclick="refreshDashboard()">
+            <i class="fa-solid fa-arrows-rotate fa-2x"></i> Refresh Data
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. INVENTORY DATABASE MODULE -->
+    <div id="inventory-db" class="module-view">
+      <div class="module-header" style="background-color: var(--dark-charcoal);">
+        <span><i class="fa-solid fa-database me-2"></i>INVENTORY DATABASE</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="table-container">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle" id="inv-table">
+            <thead>
+              <tr>
+                <th>Product ID</th><th>SKU</th><th>Product Name</th><th>Category</th>
+                <th>Supplier</th><th>Unit</th><th>Opening</th><th>Added</th>
+                <th>Removed</th><th>Net Adj</th><th>Current Stock</th><th>Min Level</th>
+                <th>Status</th><th>Unit Cost</th><th>Total Value</th><th>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody><!-- Dynamic --></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ADD STOCK MODULE -->
+    <div id="add-stock" class="module-view">
+      <div class="module-header bg-blue">
+        <span><i class="fa-solid fa-plus-circle me-2"></i>ADD STOCK</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="form-section">
+        <form id="form-add-stock" onsubmit="submitAddStock(event)">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Select Product (SKU)</label>
+              <select class="form-select" id="add-sku" onchange="autoFillProduct('add')" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Product Name</label>
+              <input type="text" class="form-control" id="add-name" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Supplier</label>
+              <input type="text" class="form-control" id="add-supplier" readonly>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Quantity Received</label>
+              <input type="number" class="form-control" id="add-qty" min="1" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Unit Cost ($)</label>
+              <input type="number" step="0.01" class="form-control" id="add-cost" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Invoice Number</label>
+              <input type="text" class="form-control" id="add-invoice">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Destination Location</label>
+              <input type="text" class="form-control" id="add-location" value="Main Warehouse">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" id="add-notes" rows="2"></textarea>
+            </div>
+            <div class="col-md-12 text-end">
+              <button type="reset" class="btn btn-secondary me-2">Clear Form</button>
+              <button type="submit" class="btn btn-primary">Save Stock Entry</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 4. ADJUST STOCK MODULE -->
+    <div id="adjust-stock" class="module-view">
+      <div class="module-header bg-teal">
+        <span><i class="fa-solid fa-sliders me-2"></i>ADJUST STOCK</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="form-section">
+        <form id="form-adjust-stock" onsubmit="submitAdjustStock(event)">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Select Product SKU</label>
+              <select class="form-select" id="adj-sku" onchange="autoFillProduct('adj')" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Product Name</label>
+              <input type="text" class="form-control" id="adj-name" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Current System Quantity</label>
+              <input type="number" class="form-control" id="adj-system" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Physical Count Quantity</label>
+              <input type="number" class="form-control" id="adj-physical" oninput="calcAdjustmentDiff()" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Quantity Difference</label>
+              <input type="number" class="form-control" id="adj-diff" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Adjustment Reason</label>
+              <select class="form-select" id="adj-reason" required>
+                <option value="">-- Select Reason --</option>
+                <option value="Physical Count Correction">Physical Count Correction</option>
+                <option value="Damaged Stock">Damaged Stock</option>
+                <option value="Missing / Stolen">Missing / Stolen</option>
+                <option value="Found Stock">Found Stock</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Approved By</label>
+              <input type="text" class="form-control" id="adj-approved" placeholder="Manager Name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location</label>
+              <input type="text" class="form-control" id="adj-location" value="Main Warehouse">
+            </div>
+            <div class="col-md-12 text-end">
+              <button type="submit" class="btn btn-info text-white">Save Adjustment</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 5. REMOVE STOCK MODULE -->
+    <div id="remove-stock" class="module-view">
+      <div class="module-header bg-orange">
+        <span><i class="fa-solid fa-minus-circle me-2"></i>REMOVE STOCK</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="form-section">
+        <form id="form-remove-stock" onsubmit="submitRemoveStock(event)">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Select Product SKU</label>
+              <select class="form-select" id="rem-sku" onchange="autoFillProduct('rem')" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Product Name</label>
+              <input type="text" class="form-control" id="rem-name" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Current Available Stock</label>
+              <input type="number" class="form-control" id="rem-current" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Quantity to Remove</label>
+              <input type="number" class="form-control" id="rem-qty" min="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Removal Reason</label>
+              <input type="text" class="form-control" id="rem-reason" placeholder="e.g. Sales Order, Internal Consumption" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Department / Customer</label>
+              <input type="text" class="form-control" id="rem-dept">
+            </div>
+            <div class="col-md-12 text-end">
+              <button type="submit" class="btn btn-warning text-dark">Save Removal</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 6. SUPPLIERS DATABASE -->
+    <div id="suppliers-db" class="module-view">
+      <div class="module-header" style="background-color: var(--dark-charcoal);">
+        <span><i class="fa-solid fa-truck me-2"></i>SUPPLIER DATABASE</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="table-container">
+        <table class="table table-bordered align-middle" id="suppliers-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Supplier Name</th><th>Contact Person</th><th>Phone</th>
+              <th>Email</th><th>Address</th><th>Terms</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody><!-- Dynamic --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 8. LOW STOCK REPORT -->
+    <div id="low-stock-report" class="module-view">
+      <div class="module-header bg-green">
+        <span><i class="fa-solid fa-triangle-exclamation me-2"></i>LOW STOCK REPORT</span>
+        <div>
+          <button class="btn btn-sm btn-light me-2" onclick="window.print()">Print / Export PDF</button>
+          <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="table table-bordered align-middle" id="lowstock-table">
+          <thead>
+            <tr>
+              <th>SKU</th><th>Product Name</th><th>Category</th><th>Supplier</th>
+              <th>Current Stock</th><th>Min Level</th><th>Shortage</th><th>Suggested Order</th>
+              <th>Unit Cost</th><th>Est. Order Cost</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody><!-- Dynamic --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 9. LOW STOCK BY SUPPLIER -->
+    <div id="low-stock-supplier" class="module-view">
+      <div class="module-header bg-green">
+        <span><i class="fa-solid fa-boxes-packing me-2"></i>LOW STOCK BY SUPPLIER</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="table-container" id="low-supplier-container">
+        <!-- Dynamic grouping -->
+      </div>
+    </div>
+
+    <!-- 10. LOW STOCK BY DATE -->
+    <div id="low-stock-date" class="module-view">
+      <div class="module-header bg-orange">
+        <span><i class="fa-solid fa-calendar-check me-2"></i>LOW STOCK BY DATE</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="table-container">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="lsd-start">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">End Date</label>
+            <input type="date" class="form-control" id="lsd-end">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="fetchLowStockByDate()">Run Period Analysis</button>
+          </div>
+        </div>
+        <table class="table table-bordered align-middle" id="lsd-table">
+          <thead>
+            <tr>
+              <th>SKU</th><th>Product Name</th><th>Supplier</th><th>Period Opening</th>
+              <th>Added</th><th>Removed</th><th>Adjustments</th><th>Period Closing</th>
+              <th>Min Level</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody><!-- Dynamic --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 11. SUPPLIER VIEW -->
+    <div id="supplier-view" class="module-view">
+      <div class="module-header bg-yellow">
+        <span class="text-dark"><i class="fa-solid fa-address-card me-2"></i>SUPPLIER FOCUSED VIEW</span>
+        <button class="btn btn-sm btn-dark" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="table-container">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Select Supplier</label>
+            <select class="form-select" id="supplier-select" onchange="renderSupplierView()"></select>
+          </div>
+        </div>
+        <table class="table table-bordered align-middle" id="supplier-view-table">
+          <thead>
+            <tr>
+              <th>SKU</th><th>Product Name</th><th>Category</th><th>Current Stock</th>
+              <th>Min Level</th><th>Unit Cost</th><th>Stock Value</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody><!-- Dynamic --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 12. SETTINGS MODULE -->
+    <div id="settings-view" class="module-view">
+      <div class="module-header bg-darkgrey">
+        <span><i class="fa-solid fa-sliders me-2"></i>SYSTEM SETTINGS</span>
+        <button class="btn btn-sm btn-outline-light" onclick="showModule('main-menu')">Back to Menu</button>
+      </div>
+      <div class="form-section">
+        <form id="form-settings" onsubmit="saveSettings(event)">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Business Name</label>
+              <input type="text" class="form-control" id="setting-bizname" value="Apex Logistics Ltd.">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Allow Negative Stock Balance</label>
+              <select class="form-select" id="setting-negstock">
+                <option value="No">No (Strict Protection)</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Require Adjustment Reason</label>
+              <select class="form-select" id="setting-adjreason">
+                <option value="Yes">Yes (Enforce)</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Currency Symbol</label>
+              <input type="text" class="form-control" id="setting-currency" value="$">
+            </div>
+            <div class="col-md-12 text-end">
+              <button type="submit" class="btn btn-dark">Save Configurations</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let globalInventory = [];
+    let globalSuppliers = [];
+    function showError(err) { console.error(err); alert('Something went wrong while communicating with the spreadsheet. Please reload and try again.'); }
+    function safeText(value) { return String(value == null ? '' : value).replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch])); }
+
+    window.onload = function() {
+      refreshDashboard();
+      // Set default dates
+      let now = new Date(); let today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      document.getElementById('lsd-start').value = today;
+      document.getElementById('lsd-end').value = today;
+    };
+
+    function showModule(moduleId) {
+      document.querySelectorAll('.module-view').forEach(m => m.classList.remove('active'));
+      document.getElementById(moduleId).classList.add('active');
+
+      if (moduleId === 'inventory-db') renderInventoryTable();
+      if (moduleId === 'suppliers-db') renderSuppliersTable();
+      if (moduleId === 'low-stock-report') renderLowStockReport();
+      if (moduleId === 'low-stock-supplier') renderLowStockBySupplier();
+      if (moduleId === 'supplier-view') renderSupplierView();
+    }
+
+    function refreshDashboard() {
+      google.script.run.withSuccessHandler(data => {
+        document.getElementById('kpi-products').innerText = data.totalProducts;
+        document.getElementById('kpi-units').innerText = data.totalUnits;
+        document.getElementById('kpi-lowstock').innerText = data.lowStockCount;
+        document.getElementById('kpi-outstock').innerText = data.outOfStockCount;
+        document.getElementById('current-date-display').innerText = data.currentDate;
+      }).withFailureHandler(showError).getDashboardMetrics();
+
+      google.script.run.withSuccessHandler(data => {
+        globalInventory = data;
+        populateSkuDropdowns();
+      }).withFailureHandler(showError).getInventoryDatabase();
+
+      google.script.run.withSuccessHandler(data => {
+        globalSuppliers = data;
+        populateSupplierSelect();
+      }).withFailureHandler(showError).getSuppliersList();
+    }
+
+    function populateSkuDropdowns() {
+      ['add-sku', 'adj-sku', 'rem-sku'].forEach(id => {
+        let select = document.getElementById(id);
+        select.innerHTML = '<option value="">-- Select SKU --</option>';
+        globalInventory.forEach(item => {
+          select.insertAdjacentHTML('beforeend', `<option value="${safeText(item['SKU / Item Code'])}">${safeText(item['SKU / Item Code'])} - ${safeText(item['Product Name'])}</option>`);
+        });
+      });
+    }
+
+    function populateSupplierSelect() {
+      let select = document.getElementById('supplier-select');
+      select.innerHTML = '<option value="">-- Select Supplier --</option>';
+      globalSuppliers.forEach(sup => {
+        select.insertAdjacentHTML('beforeend', `<option value="${safeText(sup['Supplier Name'])}">${safeText(sup['Supplier Name'])}</option>`);
+      });
+    }
+
+    function autoFillProduct(mode) {
+      let sku = document.getElementById(`${mode}-sku`).value;
+      let product = globalInventory.find(p => p['SKU / Item Code'] === sku);
+      if (!product) return;
+
+      if (mode === 'add') {
+        document.getElementById('add-name').value = product['Product Name'];
+        document.getElementById('add-supplier').value = product['Supplier Name'];
+        document.getElementById('add-cost').value = product['Unit Cost'];
+      } else if (mode === 'adj') {
+        document.getElementById('adj-name').value = product['Product Name'];
+        document.getElementById('adj-system').value = product['Current Stock'];
+      } else if (mode === 'rem') {
+        document.getElementById('rem-name').value = product['Product Name'];
+        document.getElementById('rem-current').value = product['Current Stock'];
+      }
+    }
+
+    function calcAdjustmentDiff() {
+      let sys = Number(document.getElementById('adj-system').value) || 0;
+      let phys = Number(document.getElementById('adj-physical').value) || 0;
+      document.getElementById('adj-diff').value = phys - sys;
+    }
+
+    /* Submissions */
+    function submitAddStock(e) {
+      e.preventDefault();
+      let payload = {
+        sku: document.getElementById('add-sku').value,
+        productName: document.getElementById('add-name').value,
+        supplier: document.getElementById('add-supplier').value,
+        quantity: document.getElementById('add-qty').value,
+        unitCost: document.getElementById('add-cost').value,
+        invoiceNum: document.getElementById('add-invoice').value,
+        location: document.getElementById('add-location').value,
+        notes: document.getElementById('add-notes').value,
+        date: new Date().toLocaleDateString('en-CA')
+      };
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        if(res.success) { e.target.reset(); refreshDashboard(); showModule('main-menu'); }
+      }).withFailureHandler(showError).recordAddStock(payload);
+    }
+
+    function submitAdjustStock(e) {
+      e.preventDefault();
+      let payload = {
+        sku: document.getElementById('adj-sku').value,
+        productName: document.getElementById('adj-name').value,
+        systemQty: document.getElementById('adj-system').value,
+        physicalQty: document.getElementById('adj-physical').value,
+        reason: document.getElementById('adj-reason').value,
+        approvedBy: document.getElementById('adj-approved').value,
+        location: document.getElementById('adj-location').value,
+        notes: '', date: new Date().toLocaleDateString('en-CA')
+      };
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        if(res.success) { e.target.reset(); refreshDashboard(); showModule('main-menu'); }
+      }).withFailureHandler(showError).recordAdjustStock(payload);
+    }
+
+    function submitRemoveStock(e) {
+      e.preventDefault();
+      let payload = {
+        sku: document.getElementById('rem-sku').value,
+        productName: document.getElementById('rem-name').value,
+        currentStock: document.getElementById('rem-current').value,
+        quantity: document.getElementById('rem-qty').value,
+        reason: document.getElementById('rem-reason').value,
+        deptCustomer: document.getElementById('rem-dept').value,
+        refNum: '', notes: '', date: new Date().toLocaleDateString('en-CA')
+      };
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        if(res.success) { e.target.reset(); refreshDashboard(); showModule('main-menu'); }
+      }).withFailureHandler(showError).recordRemoveStock(payload);
+    }
+
+    /* Render Tables */
+    function renderInventoryTable() {
+      let tbody = document.querySelector('#inv-table tbody');
+      tbody.innerHTML = '';
+      globalInventory.forEach(item => {
+        let badge = item['Stock Status'] === 'In Stock' ? 'badge-instock' :
+                   (item['Stock Status'] === 'Low Stock' ? 'badge-lowstock' : 'badge-outstock');
+        tbody.innerHTML += `
+          <tr>
+            <td>${item['Product ID']}</td><td>${item['SKU / Item Code']}</td><td>${item['Product Name']}</td>
+            <td>${item['Category']}</td><td>${item['Supplier Name']}</td><td>${item['Unit']}</td>
+            <td>${item['Opening Stock']}</td><td>${item['Total Stock Added']}</td><td>${item['Total Stock Removed']}</td>
+            <td>${item['Net Adjustments']}</td><td><strong>${item['Current Stock']}</strong></td><td>${item['Minimum Stock Level']}</td>
+            <td><span class="${badge}">${item['Stock Status']}</span></td><td>$${item['Unit Cost']}</td>
+            <td>$${item['Total Stock Value']}</td><td>${item['Last Updated']}</td>
+          </tr>`;
+      });
+    }
+
+    function renderSuppliersTable() {
+      let tbody = document.querySelector('#suppliers-table tbody');
+      tbody.innerHTML = '';
+      globalSuppliers.forEach(sup => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${sup['Supplier ID']}</td><td>${sup['Supplier Name']}</td><td>${sup['Contact Person']}</td>
+            <td>${sup['Phone Number']}</td><td>${sup['Email Address']}</td><td>${sup['Business Address']}</td>
+            <td>${sup['Payment Terms']}</td><td><span class="badge bg-success">${sup['Supplier Status']}</span></td>
+          </tr>`;
+      });
+    }
+
+    function renderLowStockReport() {
+      google.script.run.withSuccessHandler(data => {
+        let tbody = document.querySelector('#lowstock-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.sku}</td><td>${item.name}</td><td>${item.category}</td><td>${item.supplier}</td>
+              <td class="text-danger fw-bold">${item.currentStock}</td><td>${item.minStock}</td>
+              <td>${item.shortage}</td><td>${item.suggestedOrder}</td><td>$${item.unitCost}</td>
+              <td>$${item.estCost}</td><td><span class="badge-lowstock">${item.status}</span></td>
+            </tr>`;
+        });
+      }).withFailureHandler(showError).getLowStockReport('ALL', 'ALL');
+    }
+
+    function renderLowStockBySupplier() {
+      google.script.run.withSuccessHandler(data => {
+        let container = document.getElementById('low-supplier-container');
+        container.innerHTML = '';
+        let grouped = {};
+        data.forEach(item => {
+          if(!grouped[item.supplier]) grouped[item.supplier] = [];
+          grouped[item.supplier].push(item);
+        });
+
+        Object.keys(grouped).forEach(supplier => {
+          let rows = grouped[supplier].map(i => `
+            <tr>
+              <td>${i.sku}</td><td>${i.name}</td><td>${i.currentStock}</td>
+              <td>${i.minStock}</td><td>${i.suggestedOrder}</td><td>$${i.estCost}</td>
+            </tr>`).join('');
+
+          container.innerHTML += `
+            <div class="mb-4">
+              <h5 class="text-success"><i class="fa-solid fa-truck me-2"></i>Supplier: ${supplier}</h5>
+              <table class="table table-bordered">
+                <thead><tr><th>SKU</th><th>Product Name</th><th>Current Stock</th><th>Min Level</th><th>Suggested Order</th><th>Est Cost</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+        });
+      }).withFailureHandler(showError).getLowStockReport('ALL', 'ALL');
+    }
+
+    function fetchLowStockByDate() {
+      let start = document.getElementById('lsd-start').value;
+      let end = document.getElementById('lsd-end').value;
+      google.script.run.withSuccessHandler(data => {
+        let tbody = document.querySelector('#lsd-table tbody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.sku}</td><td>${item.name}</td><td>${item.supplier}</td>
+              <td>${item.opening}</td><td>${item.added}</td><td>${item.removed}</td>
+              <td>${item.adjustments}</td><td class="fw-bold">${item.closing}</td>
+              <td>${item.minStock}</td><td><span class="badge-lowstock">${item.status}</span></td>
+            </tr>`;
+        });
+      }).withFailureHandler(showError).getLowStockByDateReport(start, end);
+    }
+
+    function renderSupplierView() {
+      let selected = document.getElementById('supplier-select').value;
+      let tbody = document.querySelector('#supplier-view-table tbody');
+      tbody.innerHTML = '';
+      globalInventory.filter(p => p['Supplier Name'] === selected).forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${item['SKU / Item Code']}</td><td>${item['Product Name']}</td><td>${item['Category']}</td>
+            <td>${item['Current Stock']}</td><td>${item['Minimum Stock Level']}</td><td>$${item['Unit Cost']}</td>
+            <td>$${item['Total Stock Value']}</td><td>${item['Stock Status']}</td>
+          </tr>`;
+      });
+    }
+
+    function loadSampleData() {
+      if(confirm("Load demonstration sample records?")) {
+        google.script.run.withSuccessHandler(res => {
+          alert(res.message);
+          refreshDashboard();
+        }).withFailureHandler(showError).loadSampleData();
+      }
+    }
+
+    function saveSettings(e) {
+      e.preventDefault();
+      let payload = {
+        "Business Name": document.getElementById('setting-bizname').value,
+        "Allow Negative Stock": document.getElementById('setting-negstock').value,
+        "Require Adjustment Reason": document.getElementById('setting-adjreason').value,
+        "Currency Symbol": document.getElementById('setting-currency').value
+      };
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+      }).withFailureHandler(showError).saveSystemSettings(payload);
+    }
+  </script>
+</body>
+</html>
